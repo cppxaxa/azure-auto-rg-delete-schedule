@@ -30,6 +30,13 @@
       "metadata": {
         "description": "First run time for the daily cleanup schedule. Must be a future UTC datetime. Defaults to tomorrow."
       }
+    },
+    "jobScheduleGuid": {
+      "type": "string",
+      "defaultValue": "[newGuid()]",
+      "metadata": {
+        "description": "Unique GUID for the job schedule link. A new value is generated on each deployment to avoid conflicts."
+      }
     }
   },
 
@@ -37,7 +44,6 @@
     "automationAccountName": "[parameters('automationAccountName')]",
     "runbookName": "EphemeralRGCleanup",
     "scheduleName": "DailyCleanupSchedule",
-    "jobScheduleGuid": "[guid(parameters('automationAccountName'), 'EphemeralRGCleanup', 'daily')]",
     "contributorRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
     "nestedDeploymentName": "deploy-automation-resources",
     "roleAssignmentName": "[guid(subscription().id, parameters('automationAccountName'), 'contributor')]"
@@ -73,7 +79,7 @@
           "automationAccountName":  { "value": "[parameters('automationAccountName')]" },
           "scheduleName":           { "value": "[variables('scheduleName')]" },
           "runbookName":            { "value": "[variables('runbookName')]" },
-          "jobScheduleGuid":        { "value": "[variables('jobScheduleGuid')]" },
+          "jobScheduleGuid":        { "value": "[parameters('jobScheduleGuid')]" },
           "scheduleStartTime":      { "value": "[parameters('scheduleStartTime')]" }
         },
         "template": {
