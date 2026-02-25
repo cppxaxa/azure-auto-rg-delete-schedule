@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(cd C:\\\\l1\\\\azure-auto-rg-delete-schedule:*)",
+      "Bash(cd \"C:\\\\l1\\\\azure-auto-rg-delete-schedule\" && git push -u origin main 2>&1)"
+    ]
+  }
+}
