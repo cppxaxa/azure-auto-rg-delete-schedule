@@ -13,11 +13,11 @@ Apply these two tags to any resource group you want automatically cleaned up:
 | Tag key    | Required | Value format / example                        |
 |------------|----------|-----------------------------------------------|
 | `ephemeral`| ✅ Yes   | `true`                                        |
-| `created`  | ✅ Yes   | `2025-06-01 14:30:00` or `2025-06-01T14:30:00` |
+| `Created`  | ✅ Yes   | `2025-06-01 14:30:00` or `2025-06-01T14:30:00` |
 
 **Example (Azure CLI):**
 ```bash
-az group create --name my-test-rg --location eastus --tags ephemeral=true created="2025-06-01 14:30:00"
+az group create --name my-test-rg --location eastus --tags ephemeral=true Created="2025-06-01 14:30:00"
 ```
 
 The runbook checks every 24 hours and deletes any resource group where `ephemeral=true` **and** the `created` timestamp is more than 24 hours in the past.

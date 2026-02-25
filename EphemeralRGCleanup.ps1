@@ -13,7 +13,7 @@ foreach ($rg in $resourceGroups) {
     if ($null -eq $tags) { continue }
 
     $isEphemeral = $tags["ephemeral"]
-    $createdTag   = $tags["created"]
+    $createdTag   = $tags["Created"]
 
     if ($isEphemeral -ne "true" -or [string]::IsNullOrWhiteSpace($createdTag)) { continue }
 
