@@ -1,0 +1,207 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "eastus",
+      "metadata": {
+        "description": "Azure region for all resources."
+      }
+    },
+    "automationAccountName": {
+      "type": "string",
+      "defaultValue": "auto-cleanup-account",
+      "metadata": {
+        "description": "Name of the Azure Automation Account."
+      }
+    },
+    "resourceGroupName": {
+      "type": "string",
+      "defaultValue": "rg-auto-cleanup",
+      "metadata": {
+        "description": "Name of the resource group that will host the Automation Account."
+      }
+    },
+    "scheduleStartTime": {
+      "type": "string",
+      "defaultValue": "[dateTimeAdd(utcNow('u'), 'P1D')]",
+      "metadata": {
+        "description": "First run time for the daily cleanup schedule. Must be a future UTC datetime. Defaults to tomorrow."
+      }
+    }
+  },
+
+  "variables": {
+    "automationAccountName": "[parameters('automationAccountName')]",
+    "runbookName": "EphemeralRGCleanup",
+    "scheduleName": "DailyCleanupSchedule",
+    "jobScheduleGuid": "[guid(parameters('automationAccountName'), 'EphemeralRGCleanup', 'daily')]",
+    "contributorRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+    "nestedDeploymentName": "deploy-automation-resources",
+    "roleAssignmentName": "[guid(subscription().id, parameters('automationAccountName'), 'contributor')]"
+  },
+
+  "resources": [
+
+    {
+      "type": "Microsoft.Resources/resourceGroups",
+      "apiVersion": "2021-04-01",
+      "name": "[parameters('resourceGroupName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "purpose": "automation-infra"
+      }
+    },
+
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "[variables('nestedDeploymentName')]",
+      "resourceGroup": "[parameters('resourceGroupName')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/resourceGroups', parameters('resourceGroupName'))]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "parameters": {
+          "location":               { "value": "[parameters('location')]" },
+          "automationAccountName":  { "value": "[parameters('automationAccountName')]" },
+          "scheduleName":           { "value": "[variables('scheduleName')]" },
+          "runbookName":            { "value": "[variables('runbookName')]" },
+          "jobScheduleGuid":        { "value": "[variables('jobScheduleGuid')]" },
+          "scheduleStartTime":      { "value": "[parameters('scheduleStartTime')]" }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "location":              { "type": "string" },
+            "automationAccountName": { "type": "string" },
+            "scheduleName":          { "type": "string" },
+            "runbookName":           { "type": "string" },
+            "jobScheduleGuid":       { "type": "string" },
+            "scheduleStartTime":     { "type": "string" }
+          },
+          "resources": [
+
+            {
+              "type": "Microsoft.Automation/automationAccounts",
+              "apiVersion": "2023-11-01",
+              "name": "[parameters('automationAccountName')]",
+              "location": "[parameters('location')]",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "sku": {
+                  "name": "Free"
+                }
+              }
+            },
+
+            {
+              "type": "Microsoft.Automation/automationAccounts/runbooks",
+              "apiVersion": "2023-11-01",
+              "name": "[concat(parameters('automationAccountName'), '/', parameters('runbookName'))]",
+              "location": "[parameters('location')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]"
+              ],
+              "properties": {
+                "runbookType": "PowerShell",
+                "logVerbose": false,
+                "logProgress": false,
+                "description": "Deletes resource groups tagged ephemeral=true whose created tag is older than 24 hours.",
+                "publishContentLink": {
+                  "uri": "https://raw.githubusercontent.com/cppxaxa/azure-auto-rg-delete-schedule/main/EphemeralRGCleanup.ps1"
+                }
+              }
+            },
+
+            {
+              "type": "Microsoft.Automation/automationAccounts/schedules",
+              "apiVersion": "2023-11-01",
+              "name": "[concat(parameters('automationAccountName'), '/', parameters('scheduleName'))]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]"
+              ],
+              "properties": {
+                "description": "Triggers EphemeralRGCleanup runbook once every day.",
+                "startTime": "[parameters('scheduleStartTime')]",
+                "frequency": "Day",
+                "interval": 1,
+                "timeZone": "UTC"
+              }
+            },
+
+            {
+              "type": "Microsoft.Automation/automationAccounts/jobSchedules",
+              "apiVersion": "2023-11-01",
+              "name": "[concat(parameters('automationAccountName'), '/', parameters('jobScheduleGuid'))]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Automation/automationAccounts/runbooks', parameters('automationAccountName'), parameters('runbookName'))]",
+                "[resourceId('Microsoft.Automation/automationAccounts/schedules', parameters('automationAccountName'), parameters('scheduleName'))]"
+              ],
+              "properties": {
+                "runbook": {
+                  "name": "[parameters('runbookName')]"
+                },
+                "schedule": {
+                  "name": "[parameters('scheduleName')]"
+                }
+              }
+            }
+
+          ],
+
+          "outputs": {
+            "principalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName')), '2023-11-01', 'full').identity.principalId]"
+            }
+          }
+        }
+      }
+    },
+
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "name": "[variables('roleAssignmentName')]",
+      "dependsOn": [
+        "[variables('nestedDeploymentName')]"
+      ],
+      "properties": {
+        "roleDefinitionId": "[variables('contributorRoleDefinitionId')]",
+        "principalId": "[reference(variables('nestedDeploymentName')).outputs.principalId.value]",
+        "principalType": "ServicePrincipal",
+        "description": "Grants the Automation Account managed identity Contributor access at subscription scope so it can delete ephemeral resource groups."
+      }
+    }
+
+  ],
+
+  "outputs": {
+    "automationAccountName": {
+      "type": "string",
+      "value": "[parameters('automationAccountName')]"
+    },
+    "resourceGroupName": {
+      "type": "string",
+      "value": "[parameters('resourceGroupName')]"
+    },
+    "principalId": {
+      "type": "string",
+      "value": "[reference(variables('nestedDeploymentName')).outputs.principalId.value]"
+    },
+    "scheduleStartTime": {
+      "type": "string",
+      "value": "[parameters('scheduleStartTime')]"
+    }
+  }
+}
