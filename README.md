@@ -4,7 +4,7 @@ Automatically deletes ephemeral Azure resource groups using an Azure Automation 
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fcppxaxa%2Fazure-auto-rg-delete-schedule%2Fmain%2Fazuredeploy.json)
 
-> ⚠️ The Deploy to Azure button may fail with `RoleAssignmentUpdateNotPermitted` if a role assignment already exists from a previous deployment. In that case, use the CLI instead:
+> ⚠️ The Deploy to Azure button may fail with `RoleAssignmentUpdateNotPermitted`. In that case, use the CLI instead:
 > ```bat
 > az deployment sub create --location eastus --template-file azuredeploy.json --parameters @azuredeploy.parameters.json
 > ```
