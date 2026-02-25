@@ -1,6 +1,6 @@
 # Azure Auto RG Delete Schedule
 
-Automatically deletes ephemeral Azure resource groups using an Azure Automation runbook on a daily schedule. Tag any resource group with `ephemeral=true` and a `created` timestamp, and it will be removed once it is older than 24 hours.
+Automatically deletes ephemeral Azure resource groups using an Azure Automation runbook on a daily schedule. Tag any resource group with `ephemeral=true` and a `Created` timestamp, and it will be removed once it is older than 24 hours.
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fcppxaxa%2Fazure-auto-rg-delete-schedule%2Fmain%2Fazuredeploy.json)
 
@@ -25,4 +25,4 @@ Apply these two tags to any resource group you want automatically cleaned up:
 az group create --name my-test-rg --location eastus --tags ephemeral=true Created="2025-06-01 14:30:00"
 ```
 
-The runbook checks every 24 hours and deletes any resource group where `ephemeral=true` **and** the `created` timestamp is more than 24 hours in the past.
+The runbook checks every 24 hours and deletes any resource group where `ephemeral=true` **and** the `Created` timestamp is more than 24 hours in the past.
